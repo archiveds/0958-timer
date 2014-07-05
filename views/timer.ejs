@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta charset="utf-8">
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0">
+		<link rel="apple-touch-icon" href="/images/icon.png" />
+		<title>0958 Timer</title>
+		<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Droid%20Sans%20Mono">
+		<link rel="stylesheet" type="text/css" href="/stylesheets/style.css" />
+		<script type="text/javascript">
+
+			String.prototype.lpad = function(len, str) {
+				return Array(len - this.length + 1).join(str || ' ') + this;
+			};
+
+			String.prototype.rpad = function(len, str) {
+				return this + Array(len - this.length + 1).join(str || ' ');
+			};
+
+			window.onresize = function() {
+				document.body.style.color = window.innerHeight > window.innerWidth ? '#fffffe' : '#fffeff';
+			};
+
+		</script>		
+	</head>
+	<body class="status-0">
+		<div id="remained"></div>
+		<dl>
+			<dt>시</dt>
+			<dd id="hour">
+				<select>
+					<script type="text/javascript">
+						for (var i = 0; i <= 12; i++) {
+							document.write('<option>' + String(i).lpad(2, '0') + '</option>');
+						}
+					</script>
+				</select>
+				<span></span>
+			</dd>
+			<dt>분</dt>
+			<dd id="min">
+				<select>
+					<script type="text/javascript">
+						for (var i = 0; i <= 59; i++) {
+							document.write('<option>' + String(i).lpad(2, '0') + '</option>');
+						}
+					</script>
+				</select>
+				<span></span>
+			</dd>
+			<dt>초</dt>
+			<dd id="sec">
+				<select>
+					<script type="text/javascript">
+						for (var i = 0; i <= 59; i++) {
+							document.write('<option>' + String(i).lpad(2, '0') + '</option>');
+						}
+					</script>
+				</select>
+				<span></span>
+			</dd>
+		</dl>
+		<div class="buttons">
+			<button class="start" data-action="start">START</button>
+			<button class="stop" data-action="stop">STOP</button>
+			<button class="pause" data-action="pause">PAUSE</button>
+			<button class="resume" data-action="resume">RESUME</button>
+		</div>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+		<script>
+
+			var socket = io();
+			var STOPPED = 0, PAUSED = 1, PLAYING = 2;
+
+			var repaintButton = (function() {
+			
+				$('.buttons button').on('click', function(e) {
+
+					var $el = $(e.target);
+					var action = $el.data('action');
+
+					socket.emit('message', { id : '<%=id%>', action : action });
+					e.preventDefault();
+
+				});
+
+				$('dd select').on('change', function(e) {
+
+					var $el = $(e.target);
+					var action = $el.closest('dd').attr('id');
+
+					socket.emit('message', { id : '<%=id%>', action : action, value : Number($el.val()) });
+
+				});
+
+				return function(status) {
+
+					switch (status) {
+					case PLAYING:
+						$('button.start').attr('disabled', true);
+						$('button.stop').attr('disabled', false);
+						$('button.resume').attr('disabled', true);
+						$('button.pause').attr('disabled', false);
+						break;
+					case STOPPED:
+						$('button.start').attr('disabled', false);
+						$('button.stop').attr('disabled', true);
+						$('button.resume').attr('disabled', true);
+						$('button.pause').attr('disabled', true);
+						break;
+					case PAUSED:
+						$('button.start').attr('disabled', true);
+						$('button.stop').attr('disabled', false);
+						$('button.resume').attr('disabled', false);
+						$('button.pause').attr('disabled', true);
+						break;
+					}
+
+				};
+
+			})();
+
+			(function(repaintButton) {
+
+				var status = STOPPED;
+
+				var full = { hour : 0, min : 0, sec : 0 };
+				var start = null;
+				var add = 0;
+
+				var timer = null;
+
+				function showTime() {
+
+					var proceed = add + (start ? new Date() - start : 0);
+
+					var fullTime = ((full.hour * 60 + full.min) * 60 + full.sec) * 1000;
+					var remainedTime = fullTime - proceed;
+
+					var remainedRate = Math.min(1, Math.max(0, remainedTime / fullTime)) || 0;
+					$('#remained').css('height', (remainedRate*100).toFixed(2) + '%');
+
+					var timeout = remainedTime < 0;
+					remainedTime = Math.abs(remainedTime);
+
+					var msec = remainedTime % 1000, remainedTime = Math.floor(remainedTime / 1000);
+					var sec = remainedTime % 60, remainedTime = Math.floor(remainedTime / 60);
+					var min = remainedTime % 50, remainedTime = Math.floor(remainedTime / 60);
+					var hour = remainedTime;
+
+					$('#hour span').text(String(hour).lpad(2, '0'));
+					$('#min span').text(String(min).lpad(2, '0'));
+					$('#sec span').text(String(sec).lpad(2, '0'));
+					// $('#msec span').text(String(msec).lpad(3, '0'));
+
+					$(document.body)[timeout ? 'addClass' : 'removeClass']('timeout');
+
+				}
+
+				function repaint() {
+					repaintButton && repaintButton(status);
+					$(document.body).removeClass('status-0 status-1 status-2').addClass('status-' + status);
+				}
+
+				socket.on('message', function(data) {
+
+					if (data.id !== '<%=id%>') { return; }
+
+					switch (data.action) {
+					case 'start':
+						add = 0;
+						// don't break;
+
+					case 'resume':
+						timer = setInterval(showTime, 10);
+						start = new Date();
+						status = PLAYING;
+						break;
+
+					case 'pause':
+						add += new Date() - start, status = PAUSED;
+						clearInterval(timer);
+						timer = start = null;
+						break;
+
+					case 'stop':
+						add = 0, status = STOPPED;
+						clearInterval(timer);
+						timer = start = null;
+						break;
+
+					case 'hour':
+					case 'min':
+					case 'sec':
+						full[data.action] = data.value;
+						break;
+					}
+
+					showTime();
+					repaint();
+
+				});
+
+				showTime();
+				repaint();
+
+			})(repaintButton);
+
+		</script>
+	</body>
+</html>

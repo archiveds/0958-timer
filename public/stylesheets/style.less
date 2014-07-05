@@ -1,0 +1,120 @@
+body {
+	background-color:#b43;
+	color:#fff;
+	height:100%;
+	transition:.3s ease background-color;
+	font-family:'Droid Sans Mono', Monaco, Consolas;
+}
+
+body.timeout {
+	/*background-color:#b43;*/
+	-webkit-animation: timeout-bg ease 1s infinite;
+}
+
+body.status-0 {
+	background-color:#000;
+}
+
+body.status-1 {
+	background-color:#666;
+	-webkit-animation: none;
+}
+
+#remained {
+	position:absolute;
+	left:0; top:0; width:100%; height:100%;
+	background-color:#000;
+}
+
+.hide {
+	opacity:0; pointer-events:none;
+}
+
+dl, dt, dd {
+	padding:0; margin:0;
+}
+
+dl {
+	text-align:center;
+	font-size:23vw;
+	letter-spacing:-.05em;
+	position:absolute;
+	top:50%; left:0; margin-top:-.6em;
+	width:100%;
+}
+
+dt { display:none; }
+dd {
+	display:inline;
+	select { color:inherit; background:inherit; font:12px; width:27vw; height:20vw; border:0; padding:0; margin:6vw -.1em 0 0; }
+	option { color:#000; }
+}
+
+dd#hour:after,
+dd#min:after { position:relative; font-size:10vw; top:-5.5vw; content:':'; margin:0 -12vw; }
+
+.status-2 {
+	dd#hour:after,
+	dd#min:after {
+		-webkit-animation: blink ease 1s infinite;
+	}
+}
+
+@-webkit-keyframes blink {
+	0% { opacity: 0; }
+	50% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+@-webkit-keyframes timeout-bg {
+	0% { background-color:#b43; }
+	50% { background-color:#f65; }
+	100% { background-color:#b43; }
+}
+
+.status-0 /*STOPPED*/ {
+	.stop,
+	.resume { display:none; }
+	dd select { position:absolute; opacity:0; cursor:pointer; }
+}
+
+.status-1 /*PAUSED*/ {
+	.start,
+	.pause { display:none; }
+	dd select { display:none; }
+}
+
+.status-2 /*PLAYING*/ {
+	.start,
+	.resume { display:none; }
+	dd select { display:none; }
+}
+
+.buttons {
+	position:absolute; left:0; top:2vw;
+	text-align:center; width:100%;
+}
+
+.buttons button {
+	background:transparent;
+	border:1px solid #333;
+	color:#fff;
+	transition:.5s ease all;
+	font-size:3vw;
+	padding:.5em 0;
+	margin:0 .1em;
+	width:6em;
+	border-radius:.3em;
+	cursor:pointer;
+	font-family:inherit;
+}
+
+.buttons button:active:not(:disabled) {
+	background-color:#fff; color:#aaa;
+	transition:none;
+}
+
+.buttons button:disabled {
+	color:#666;
+	cursor:default;
+}
